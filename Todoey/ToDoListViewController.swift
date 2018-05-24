@@ -10,7 +10,7 @@ import UIKit
 
 class ToDoListViewController: UITableViewController {
 
-    let itemArray = ["Find Mike", "Buy Eggos", "Destroy Demegorgon"]
+    var itemArray = ["Find Mike", "Buy Eggos", "Destroy Demegorgon"]
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -60,6 +60,37 @@ class ToDoListViewController: UITableViewController {
 //    let tapGesture = UITapGestureRecognizer(target: self, action: #selector(tableViewTapped))
 //    tableView.addGestureRecognizer(tapGesture)
     
+//MARK  - Add New Items
     
+    @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
+       
+        //has scope of entire method
+        var textField = UITextField()
+        
+        
+        //needs POPUP or, UIAlertController with text field to append to end of itemArray
+        let alert = UIAlertController(title: "Add New Action:", message: "", preferredStyle: .alert)
+        
+        let action = UIAlertAction(title: "Add Action", style: .default) { (action) in
+            //what will happen once the user clicks the Add Item button on our UIAlert
+            //add to end of array & force unwrap optional
+            self.itemArray.append(textField.text!)
+            
+                //the magic method. reloads rows & sections of array, taking into account newly added items
+                self.tableView.reloadData()
+        }
+        
+        //placeholder shows in gray
+        alert.addTextField { (alertTextField) in
+            alertTextField.placeholder = "Create new action..."
+            textField = alertTextField
+        }
+        
+        alert.addAction(action)
+        
+        //shows our alert
+        present(alert, animated: true, completion: nil)
+        
+    }
 }
 
