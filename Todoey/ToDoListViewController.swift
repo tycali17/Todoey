@@ -12,8 +12,16 @@ class ToDoListViewController: UITableViewController {
 
     var itemArray = ["Find Mike", "Buy Eggos", "Destroy Demegorgon"]
     
+    //data stored inside container with user defaults. new object:
+    let defaults = UserDefaults.standard
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        //updates array to match saved plist on loadup; if let keeps app from crashing if plist doesn't exist. change force unwrap as! to optional as?
+        if let items = defaults.array(forKey: "TodoListArray") as? [String] {
+            itemArray = items
+        }
        
     }
 
@@ -76,8 +84,11 @@ class ToDoListViewController: UITableViewController {
             //add to end of array & force unwrap optional
             self.itemArray.append(textField.text!)
             
-                //the magic method. reloads rows & sections of array, taking into account newly added items
-                self.tableView.reloadData()
+            //saves updated item array to user defaults (in plist), still needs to load up table view
+            self.defaults.set(self.itemArray, forKey: "TodoListArray")
+            
+            //the magic method. reloads rows & sections of array, taking into account newly added items
+            self.tableView.reloadData()
         }
         
         //placeholder shows in gray
