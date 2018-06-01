@@ -13,29 +13,25 @@ class ToDoListViewController: UITableViewController {
     //turned item array into an array of (class->) Action objects.
     var itemArray = [Action]()
     
-    //data stored inside container with user defaults. new object:
-    let defaults = UserDefaults.standard
+    //creates path to document folder. object that provides an interface to the file system
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Actions.plist")
+    
+    //too complex for user defaults
+//    //data stored inside container with user defaults. new object:
+//    let defaults = UserDefaults.standard
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        //adding new actions to list. .title = first part of pair
-        let newAction = Action()
-        newAction.title = "Find Mike"
-        itemArray.append(newAction)
+        print(dataFilePath!)
         
-        let newAction2 = Action()
-        newAction2.title = "Buy Eggos"
-        itemArray.append(newAction2)
-        
-        let newAction3 = Action()
-        newAction3.title = "Kill Demegorgon"
-        itemArray.append(newAction3)
+        //no need for hard coding appending actions:
+        loadActions()
         
         //updates array to match saved plist on loadup; if let keeps app from crashing if plist doesn't exist. change force unwrap as! to optional as?
-        if let items = defaults.array(forKey: "TodoListArray") as? [Action] {
-            itemArray = items
-        }
+//        if let items = defaults.array(forKey: "TodoListArray") as? [Action] {
+//            itemArray = items
+//        }
        
     }
 
@@ -52,16 +48,17 @@ class ToDoListViewController: UITableViewController {
         //cell created
         let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
         
+        //shortens code; can't be global because of local function with IndexPath
         let item = itemArray[indexPath.row]
         
         //set text label to equal items in item array, current row; .title for class object
         cell.textLabel?.text = item.title
        
-        //fixes tableview problem of multiple checks.
+        //fixes tableview problem of multiple checks from reusable cells.
         //Ternary operator ==>
         // value = condition ? valueIfTrue : valueIfFalse
-        //ternary operator replaces bulky if then statement.
         cell.accessoryType = item.done == true ? .checkmark : .none
+        //ternary operator replaces bulky if then statement
         
         return cell
         
@@ -69,15 +66,15 @@ class ToDoListViewController: UITableViewController {
     
     //MARK - TableView Delegate Methods
     
+    //indexPath is a local variable set for the selected row
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
         //instead of long-ended if/else, just say it's the opposite of itself.
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done
         
-        //data gets reloaded at proper time.
-        tableView.reloadData()
+        self.saveActions()
         
-        //flashes gray instead of staying gray
+        //tap flashes gray instead of staying gray
         tableView.deselectRow(at: indexPath, animated: true)
     }
     
@@ -90,26 +87,24 @@ class ToDoListViewController: UITableViewController {
     
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
        
-        //has scope of entire method
+        //local scope
         var textField = UITextField()
         
         
-        //needs POPUP or, UIAlertController with text field to append to end of itemArray
+        //needs POPUP aka UIAlertController with text field to append to end of itemArray
         let alert = UIAlertController(title: "Add New Action:", message: "", preferredStyle: .alert)
-        
+       
+        //how you add items to list! -an action taken when user presses button in an alert
         let action = UIAlertAction(title: "Add Action", style: .default) { (action) in
             //what will happen once the user clicks the Add Action button on our UIAlert. Must be done like this for class object
             let newAction = Action()
             newAction.title = textField.text!
             
-            //add to end of array Action object
+            //add to end of array Action object. needs self because it's a closure.
             self.itemArray.append(newAction)
             
-            //saves updated item array to user defaults (in plist), still needs to load up table view
-            self.defaults.set(self.itemArray, forKey: "TodoListArray")
-            
-            //the magic method. reloads rows & sections of array, taking into account newly added items
-            self.tableView.reloadData()
+            //from below method. can tell by no description from xcode when highlighted.
+            self.saveActions()
         }
         
         //placeholder shows in gray
@@ -118,11 +113,42 @@ class ToDoListViewController: UITableViewController {
             textField = alertTextField
         }
         
+        //given method from xcode. has description when highlighted.
         alert.addAction(action)
         
         //shows our alert
         present(alert, animated: true, completion: nil)
         
     }
+    
+    //MARK - Model Manupulation Methods:
+    
+    //encode method
+    func saveActions() {
+        //saves updated item array to user defaults (in plist), still needs to load up table view
+        let encoder = PropertyListEncoder()
+        do {
+            let data = try encoder.encode(itemArray)
+            try data.write(to: dataFilePath!)
+        } catch {
+            print("Error encoding item array, \(error)")
+        }
+        //the magic method. reloads rows & sections of array, taking into account newly added items
+        self.tableView.reloadData()
+    }
+    
+    //decode method
+    func loadActions() {
+        if let data = try? Data(contentsOf: dataFilePath!){
+            let decoder = PropertyListDecoder()
+            do {
+            itemArray = try decoder.decode([Action].self, from: data)
+            } catch {
+                print("Error decoding item array, \(error)")
+            }
+        }
+    }
+    
+    
 }
 

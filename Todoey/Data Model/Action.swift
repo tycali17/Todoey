@@ -8,7 +8,8 @@
 
 import Foundation
 
-class Action {
+//needs Codable (encodable/decodable) to be able to get added to plist
+class Action: Codable {
     var title : String = ""
     var done: Bool = false
 }
