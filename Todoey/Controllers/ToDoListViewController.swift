@@ -14,6 +14,12 @@ class ToDoListViewController: UITableViewController {
     //turned item array into an array of (class->) Action objects.
     var itemArray = [Action]()
     
+    var selectedCategory : Category? {
+        didSet{
+            loadActions()
+        }
+    }
+    
     var searchBar = UISearchBar()
     
     //calls context from app delegate class with singleton
@@ -29,7 +35,8 @@ class ToDoListViewController: UITableViewController {
         //views path to document folder. object that provides an interface to the file system
         print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
         
-        loadActions()
+        //deleted
+        //loadActions()
         
         //updates array to match saved plist on loadup; if let keeps app from crashing if plist doesn't exist. change force unwrap as! to optional as?
 //        if let items = defaults.array(forKey: "TodoListArray") as? [Action] {
@@ -109,12 +116,10 @@ class ToDoListViewController: UITableViewController {
             //class (Action) automatically gets generated with entity title Action inside data model. That class already has access to properties specified, i.e., title/done
             let newAction = Action(context: self.context)
             newAction.title = textField.text!
-            newAction.done = false //every new item starts off unchecked/not done/false.
-            
-            //add to end of array Action object. needs self because it's a closure.
+            newAction.done = false
+            newAction.parentCategory = self.selectedCategory
             self.itemArray.append(newAction)
             
-            //from below method. can tell by no description from xcode when highlighted.
             self.saveActions()
         }
         
@@ -132,25 +137,39 @@ class ToDoListViewController: UITableViewController {
         
     }
     
-    //MARK - Model Manupulation Methods:
+    //MARK: - Data Model Manupulation Methods:
     
     //encode method
     func saveActions() {
 
         //sets up code to use Core Data for saving new items that have been added using the UIAlert.
         do {
-            try context.save()
+            try context.save() //try saving
         } catch {
             print("Error saving context \(error)")
         }
         //the magic method. reloads rows & sections of array, taking into account newly added items
         self.tableView.reloadData()
     }
+    
     //decode method. with is external usage; request: is internal usage
-    func loadActions(with request: NSFetchRequest<Action> = Action.fetchRequest()) {
-        //deleted- let request : NSFetchRequest<Action> = Action.fetchRequest()
+    func loadActions(with request: NSFetchRequest<Action> = Action.fetchRequest(), predicate: NSPredicate? = nil) {
+        
+        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
+        
+        //replaced below lines of code with optional binding.
+        if let additionalPredicate = predicate {
+            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, additionalPredicate])
+        } else {
+            request.predicate = categoryPredicate
+        }
+        
+        //        let compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, predicate])
+//
+//        request.predicate = compoundPredicate
+        
         do {
-            itemArray = try context.fetch(request)
+            itemArray = try context.fetch(request) //try fetching data
         } catch {
             print("Error fetching data from context \(error)")
             
@@ -159,9 +178,9 @@ class ToDoListViewController: UITableViewController {
     }
     
 }
+
+
 //MARK: searchbar methods
-//modularizes class into categories.
-//optional: extension for lengthy class delegate list:
 extension ToDoListViewController: UISearchBarDelegate {
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
        
@@ -178,6 +197,7 @@ extension ToDoListViewController: UISearchBarDelegate {
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         if searchBar.text?.count == 0 {
+            //don't need parameters since they have a set default value.
             loadActions()
         
             //Run on the main thread so that searchbar loses focus and keyboard is dimissed, even if background threads are running. Otherwise, app might assign this code to another thread...
@@ -188,12 +208,12 @@ extension ToDoListViewController: UISearchBarDelegate {
         else if searchBar.text!.count > 0 {
             let request : NSFetchRequest<Action> = Action.fetchRequest()
             
-            //what is going to be our filter/query?
-            request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+            //what is going to be our filter/query? used to say request.predicate =...
+            let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
             
             request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
             
-            loadActions(with: request)
+            loadActions(with: request, predicate: predicate)
         }
         
     }
